@@ -38,7 +38,7 @@ handle_call(unsupported, _From, _State) ->
     unsupported.
 
 handle_cast({parse, Str}, State) ->
-    send(State, {?CMD_PARSE, Str}),
+    send(State, {?CMD_PARSE, iolist_to_binary(Str)}),
     {noreply, State}.
 
 handle_info({Port, {data, Bin}},
