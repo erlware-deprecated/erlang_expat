@@ -1,6 +1,7 @@
 {application, expat,
   [{description, "expat interface"},
    {vsn, "0.1.0"},
-   {modules, [expat]},
+   {modules, [expat, expat_tree]},
    {registered,[]},
-   {applications, [kernel, stdlib, erl_interface]}]}.
+   {applications, [kernel, stdlib]}]}.
+%   {applications, [kernel, stdlib, erl_interface]}]}.
