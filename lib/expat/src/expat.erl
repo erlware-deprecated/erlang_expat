@@ -28,8 +28,7 @@ parse(Server, Str) ->
 
 
 init(Callback) ->
-    Path = os:getenv("PATH") ++ ":/Users/Shared/git/expat/lib/expat/priv",
-    os:putenv("PATH", Path),
+    os:putenv("PATH", code:priv_dir(?MODULE)),
     Port = open_port({spawn, expat},
 		     [{packet, 4}, binary, nouse_stdio, exit_status]),
     {ok, #state{port = Port, callback = Callback}}.
@@ -69,7 +68,8 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-%% {ok, P25} = expat:init({}).
+%% code:add_path("_build/development/apps/expat-0.1.0/ebin").
+%% {ok, P25} = expat:init(self()).
 %% port_command(P25, term_to_binary({1, <<"<foo><bar /></foo>">>})).
 %% (fun () -> receive {_, {data, M3}} -> io:format("~p~n", [M3]); after 50 -> timeout end end)().
 %% (fun () -> receive M3 -> M3 after 50 -> timeout end end)().
