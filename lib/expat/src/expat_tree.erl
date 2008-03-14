@@ -1,5 +1,6 @@
 -module(expat_tree).
 
+-include("expat.hrl").
 -include("expat_tree.hrl").
 -include("eunit.hrl").
 
@@ -12,11 +13,11 @@ new(#xml_el{} = El) ->
     new(El, infinity);
 new(Timeout) when is_integer(Timeout) ->
     receive
-	{start, NS, Name, Attrs} ->
+	#xml_start{ns = NS, name = Name, attrs = Attrs} ->
 	    new(#xml_el{ns = NS, name = Name, attrs = Attrs}, Timeout);
-	{data, _} ->
+	#xml_char_data{} ->
 	    throw({expat_tree_error, new_not_in_context_of_a_root});
-	{stop, _, _} ->
+	#xml_end{} ->
 	    throw({expat_tree_error, new_not_in_context_of_a_root});
 	Msg ->
 	    throw({expat_tree_error, {got_unexpected_msg, Msg}})
@@ -27,13 +28,13 @@ new(Timeout) when is_integer(Timeout) ->
 
 new(#xml_el{ns = NS, name = Name, els = Els} = El, Timeout) ->
     receive
-	{start, SubNS, SubName, SubAttrs} ->
+	#xml_start{ns = SubNS, name = SubName, attrs = SubAttrs} ->
 	    SubEl0 = #xml_el{ns = SubNS, name = SubName, attrs = SubAttrs},
 	    SubEl1 = new(SubEl0, Timeout),
 	    new(El#xml_el{els = [SubEl1 | Els]}, Timeout);
-	{data, Data} ->
+	#xml_char_data{char_data = Data} ->
 	    new(El#xml_el{els = [Data | Els]}, Timeout);
-	{stop, NS, Name} ->
+	#xml_end{ns = NS, name = Name} ->
 	    El#xml_el{els = lists:reverse(Els)};
 	Msg ->
 	    throw({expat_tree_error, {got_unexpected_msg, Msg}})

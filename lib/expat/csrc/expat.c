@@ -14,8 +14,8 @@
 
 #define RESP_ERROR	-1
 #define RESP_START	0 /* start of tag */
-#define RESP_STOP	1 /* end of tag */
-#define RESP_DATA	2
+#define RESP_END	1 /* end of tag */
+#define RESP_CHAR_DATA	2
 
 
 #define RESP_HEAD_LEN 5
@@ -30,8 +30,8 @@
 
 char resp_error[RESP_HEAD_LEN];
 char resp_start[RESP_HEAD_LEN];
-char resp_stop[RESP_HEAD_LEN];
-char resp_data[RESP_HEAD_LEN];
+char resp_end[RESP_HEAD_LEN];
+char resp_char_data[RESP_HEAD_LEN];
 
 
 /*
@@ -42,7 +42,7 @@ char resp_data[RESP_HEAD_LEN];
  *   {RESP_ERROR, <<Str>>}
  *   {RESP_SOT, <<NS>>, <<Tag>>, [<<Attrs>>]}
  *   {RESP_EOT, NS, Tag}
- *   {RESP_DATA, Data}
+ *   {RESP_CHAR_DATA, Char_Data}
  */
 
 typedef struct {
@@ -143,18 +143,18 @@ void XMLCALL end(void *data, const char *el) {
 	int el_len = strlen(el);
 
 	if ((space = strchr(el, ' ')) == NULL) { /* no namespace */
-		write_head(resp_stop, RESP_HEAD_LEN + 5 + 5 + el_len);
+		write_head(resp_end, RESP_HEAD_LEN + 5 + 5 + el_len);
 		write_bin("", 0);
 		write_bin(el, el_len);
 	} else {
-		write_head(resp_stop, RESP_HEAD_LEN + 5 + 5 + el_len - 1);
+		write_head(resp_end, RESP_HEAD_LEN + 5 + 5 + el_len - 1);
 		write_bin(el, space - el);
 		write_bin(space + 1, el_len - (space - el + 1));
 	}
 }
 
-void XMLCALL data(void *data, const XML_Char *s, int len) {
-	write_head(resp_data, RESP_HEAD_LEN + 5 + len);
+void XMLCALL char_data(void *data, const XML_Char *s, int len) {
+	write_head(resp_char_data, RESP_HEAD_LEN + 5 + len);
 	write_bin(s, len);
 }
 
@@ -162,7 +162,7 @@ void new_parser(state *st) {
 	if ((st->p = XML_ParserCreateNS(NULL, ' ')) == NULL)
 		error("Failed creating parser");
 	XML_SetElementHandler(st->p, &start, &end);
-	XML_SetCharacterDataHandler(st->p, &data);
+	XML_SetCharacterDataHandler(st->p, &char_data);
 }
 
 
@@ -243,8 +243,8 @@ int main(int argc, char **argv) {
 	/* prebuild common headers so we can just write them straight out */
 	build_resp(resp_error, RESP_ERROR, 1);
 	build_resp(resp_start, RESP_START, 3);
-	build_resp(resp_stop, RESP_STOP, 2);
-	build_resp(resp_data, RESP_DATA, 1);
+	build_resp(resp_end, RESP_END, 2);
+	build_resp(resp_char_data, RESP_CHAR_DATA, 1);
 
 	while(1) {
 		char buf[REQ_HEAD_LEN];

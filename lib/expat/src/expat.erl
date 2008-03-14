@@ -7,16 +7,16 @@
 -export([handle_call/3, handle_cast/2, handle_info/2]).
 -export([terminate/2, code_change/3]).
 
-
 -behaviour(gen_server).
 
 -define(CMD_PARSE, 0).
 
 -define(RESP_ERROR,	-1).
 -define(RESP_START,	0).
--define(RESP_STOP,	1).
--define(RESP_DATA,	2).
+-define(RESP_END,	1).
+-define(RESP_CHAR_DATA,	2).
 
+-include("expat.hrl").
 
 -record(state, {port, callback}).
 
@@ -44,14 +44,16 @@ handle_cast({parse, Str}, State) ->
 handle_info({Port, {data, Bin}},
 	    #state{port = Port, callback = Callback} = State) ->
 		   case binary_to_term(Bin) of
-		       {?RESP_START, NS, Tag, Attrs} ->
-			   Callback ! {start, NS, Tag, Attrs},
+		       {?RESP_START, NS, Name, Attrs} ->
+			   Callback ! #xml_start{ns = NS,
+						 name = Name,
+						 attrs = Attrs},
 			   {noreply, State};
-		       {?RESP_STOP, NS, Tag} ->
-			   Callback ! {stop, NS, Tag},
+		       {?RESP_END, NS, Name} ->
+			   Callback ! #xml_end{ns = NS, name = Name},
 			   {noreply, State};
-		       {?RESP_DATA, Str} ->
-			   Callback ! {data, Str},
+		       {?RESP_CHAR_DATA, Str} ->
+			   Callback ! #xml_char_data{char_data = Str},
 			   {noreply, State};
 		       {?RESP_ERROR, Str} ->
 			   error_logger:error_msg(
