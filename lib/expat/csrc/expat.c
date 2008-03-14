@@ -158,19 +158,11 @@ void XMLCALL data(void *data, const XML_Char *s, int len) {
 	write_bin(s, len);
 }
 
-void new_parser(state *st, int arity) {
-	if (arity != 0)
-		error("Wrong arity for 'new'");
-
-	if (st->p != NULL)
-		XML_ParserReset(st->p, NULL);
-	else {
-		if ((st->p = XML_ParserCreateNS(NULL, ' ')) == NULL)
-			error("Failed creating parser");
-
-		XML_SetElementHandler(st->p, &start, &end);
-		XML_SetCharacterDataHandler(st->p, &data);
-	}
+void new_parser(state *st) {
+	if ((st->p = XML_ParserCreateNS(NULL, ' ')) == NULL)
+		error("Failed creating parser");
+	XML_SetElementHandler(st->p, &start, &end);
+	XML_SetCharacterDataHandler(st->p, &data);
 }
 
 
@@ -204,7 +196,7 @@ void parse(state *st, int arity) {
 		error("Wrong arity for 'parse'");
 
 	if (st->p == NULL)
-		new_parser(st, 0);
+		new_parser(st);
 
 	len = read_bin_head();
 	done = len == 0;
@@ -228,6 +220,8 @@ void parse(state *st, int arity) {
 		len -= rsz;
 	}
 
+	if (done)
+		XML_ParserReset(st->p, NULL);
 }
 
 void build_resp(char *buf, char resp, int arity) {
