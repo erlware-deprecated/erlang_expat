@@ -1,6 +1,6 @@
 -module(expat).
 
--export([start_link/1]).
+-export([start_link/1, stop/1]).
 -export([parse/2]).
 
 -export([init/1]).
@@ -10,6 +10,7 @@
 -behaviour(gen_server).
 
 -define(CMD_PARSE, 0).
+-define(CMD_EXIT,  1).
 
 -define(RESP_ERROR,	-1).
 -define(RESP_START,	0).
@@ -22,6 +23,9 @@
 
 start_link(Callback) ->
     gen_server:start_link(?MODULE, Callback, []).
+
+stop(Server) ->
+    gen_server:cast(Server, stop).
 
 parse(Server, Str) ->
     gen_server:cast(Server, {parse, iolist_to_binary(Str)}).
@@ -39,7 +43,10 @@ handle_call(unsupported, _From, _State) ->
 
 handle_cast({parse, Str}, State) ->
     send(State, {?CMD_PARSE, iolist_to_binary(Str)}),
-    {noreply, State}.
+    {noreply, State};
+handle_cast(stop, State) ->
+    send(State, {?CMD_EXIT}),
+    {stop, normal, State}.
 
 handle_info({Port, {data, Bin}},
 	    #state{port = Port, callback = Callback} = State) ->

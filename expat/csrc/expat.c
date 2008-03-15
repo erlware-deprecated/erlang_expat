@@ -11,6 +11,7 @@
 #define ERL_OUT 4
 
 #define CMD_PARSE	0
+#define CMD_EXIT	1
 
 #define RESP_ERROR	-1
 #define RESP_START	0 /* start of tag */
@@ -158,14 +159,6 @@ void XMLCALL char_data(void *data, const XML_Char *s, int len) {
 	write_bin(s, len);
 }
 
-void new_parser(state *st) {
-	if ((st->p = XML_ParserCreateNS(NULL, ' ')) == NULL)
-		error("Failed creating parser");
-	XML_SetElementHandler(st->p, &start, &end);
-	XML_SetCharacterDataHandler(st->p, &char_data);
-}
-
-
 void read_exact(char *buf, int left) {
 	int l;
 
@@ -194,9 +187,6 @@ void parse(state *st, int arity) {
 
 	if (arity != 1)
 		error("Wrong arity for 'parse'");
-
-	if (st->p == NULL)
-		new_parser(st);
 
 	len = read_bin_head();
 	done = len == 0;
@@ -240,6 +230,11 @@ int main(int argc, char **argv) {
 	state _st = {NULL};
 	state *st = &_st;
 
+	if ((st->p = XML_ParserCreateNS(NULL, ' ')) == NULL)
+		error("Failed creating parser");
+	XML_SetElementHandler(st->p, &start, &end);
+	XML_SetCharacterDataHandler(st->p, &char_data);
+
 	/* prebuild common headers so we can just write them straight out */
 	build_resp(resp_error, RESP_ERROR, 1);
 	build_resp(resp_start, RESP_START, 3);
@@ -267,7 +262,13 @@ int main(int argc, char **argv) {
 		case CMD_PARSE:
 			parse(st, arity);
 			break;
-		default: error("unknown_command");
+
+		case CMD_EXIT:
+			XML_ParserFree(st->p);
+			exit(0);
+
+		default:
+			error("unknown_command");
 		}
 	}
 }

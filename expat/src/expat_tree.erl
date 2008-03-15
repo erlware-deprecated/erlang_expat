@@ -49,4 +49,5 @@ new_test() ->
     ?assertMatch({xml_el, <<>>, <<"a">>, [],
 		  [<<"hello">>,
 		   {xml_el, <<>>, <<"b">>, [], []},
-		   <<"world">>]}, new(100)).
+		   <<"world">>]}, new(100)),
+    expat:stop(P).
