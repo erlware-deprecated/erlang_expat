@@ -24,6 +24,14 @@ new(Timeout) when is_integer(Timeout) ->
     after
 	Timeout ->
 	    throw({expat_tree_error, timeout})
+    end;
+new(Str) ->
+    {ok, P} = expat:start_link(self()),
+    try
+	expat:parse(P, Str),
+        new()
+    after
+        expat:stop(P)
     end.
 
 new(#xml_el{ns = NS, name = Name, els = Els} = El, Timeout) ->
