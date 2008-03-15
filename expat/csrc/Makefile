@@ -1,4 +1,4 @@
-BUILD_DIR=$(echo ../../../_build/development/apps/expat-*/)
+BUILD_DIR=../../_build/development/apps/expat-*/
 
 all: ${BUILD_DIR}/priv/expat
 
