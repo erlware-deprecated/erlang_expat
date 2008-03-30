@@ -7,11 +7,11 @@
 -export([new/0, new/1, new/2]).
 
 new() ->
-    new([], infinity).
+    new(infinity).
 
 new(#xml_el{} = El) ->
     new(El, infinity);
-new(Timeout) when is_integer(Timeout) ->
+new(Timeout) when is_integer(Timeout); Timeout == infinity ->
     receive
 	#xml_start{ns = NS, name = Name, attrs = Attrs} ->
 	    new(#xml_el{ns = NS, name = Name, attrs = Attrs}, Timeout);
