@@ -52,15 +52,18 @@ handle_info({Port, {data, Bin}},
 	    #state{port = Port, callback = Callback} = State) ->
 		   case binary_to_term(Bin) of
 		       {?RESP_START, NS, Name, Attrs} ->
-			   Callback ! #xml_start{ns = NS,
-						 name = Name,
-						 attrs = Attrs},
+			   Callback ! {self(),
+                                       #xml_start{ns = NS,
+                                                  name = Name,
+                                                  attrs = Attrs}},
 			   {noreply, State};
 		       {?RESP_END, NS, Name} ->
-			   Callback ! #xml_end{ns = NS, name = Name},
+			   Callback ! {self(),
+                                       #xml_end{ns = NS, name = Name}},
 			   {noreply, State};
 		       {?RESP_CHAR_DATA, Str} ->
-			   Callback ! #xml_char_data{char_data = Str},
+			   Callback ! {self(),
+                                       #xml_char_data{char_data = Str}},
 			   {noreply, State};
 		       {?RESP_ERROR, Str} ->
 			   error_logger:error_msg(

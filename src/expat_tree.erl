@@ -4,47 +4,47 @@
 -include("expat_tree.hrl").
 -include("eunit.hrl").
 
--export([new/0, new/1, new/2]).
+-export([new/1, new/2, new/3]).
 
-new() ->
-    new(infinity).
+new(Str) when is_list(Str); is_binary(Str) ->
+    {ok, P} = expat:start_link(self()),
+    try
+	expat:parse(P, Str),
+        new(P)
+    after
+        expat:stop(P)
+    end;
+new(Expat) when is_pid(Expat); is_port(Expat); is_reference(Expat) ->
+    new(Expat, infinity).
 
-new(#xml_el{} = El) ->
-    new(El, infinity);
-new(Timeout) when is_integer(Timeout); Timeout == infinity ->
+new(Expat, #xml_el{} = El) ->
+    new(Expat, El, infinity);
+new(Expat, Timeout) when is_integer(Timeout); Timeout == infinity ->
     receive
-	#xml_start{ns = NS, name = Name, attrs = Attrs} ->
-	    new(#xml_el{ns = NS, name = Name, attrs = Attrs}, Timeout);
-	#xml_char_data{} ->
+	{Expat, #xml_start{ns = NS, name = Name, attrs = Attrs}} ->
+	    new(Expat, #xml_el{ns = NS, name = Name, attrs = Attrs}, Timeout);
+        {Expat, #xml_char_data{}} ->
 	    throw({expat_tree_error, new_not_in_context_of_a_root});
-	#xml_end{} ->
+	{Expat, #xml_end{}} ->
 	    throw({expat_tree_error, new_not_in_context_of_a_root});
-	Msg ->
+	{Expat, Msg} ->
 	    throw({expat_tree_error, {got_unexpected_msg, Msg}})
     after
 	Timeout ->
 	    throw({expat_tree_error, timeout})
-    end;
-new(Str) ->
-    {ok, P} = expat:start_link(self()),
-    try
-	expat:parse(P, Str),
-        new()
-    after
-        expat:stop(P)
     end.
 
-new(#xml_el{ns = NS, name = Name, els = Els} = El, Timeout) ->
+new(Expat, #xml_el{ns = NS, name = Name, els = Els} = El, Timeout) ->
     receive
-	#xml_start{ns = SubNS, name = SubName, attrs = SubAttrs} ->
+	{Expat, #xml_start{ns = SubNS, name = SubName, attrs = SubAttrs}} ->
 	    SubEl0 = #xml_el{ns = SubNS, name = SubName, attrs = SubAttrs},
-	    SubEl1 = new(SubEl0, Timeout),
-	    new(El#xml_el{els = [SubEl1 | Els]}, Timeout);
-	#xml_char_data{char_data = Data} ->
-	    new(El#xml_el{els = [Data | Els]}, Timeout);
-	#xml_end{ns = NS, name = Name} ->
+	    SubEl1 = new(Expat, SubEl0, Timeout),
+	    new(Expat, El#xml_el{els = [SubEl1 | Els]}, Timeout);
+	{Expat, #xml_char_data{char_data = Data}} ->
+	    new(Expat, El#xml_el{els = [Data | Els]}, Timeout);
+	{Expat, #xml_end{ns = NS, name = Name}} ->
 	    El#xml_el{els = lists:reverse(Els)};
-	Msg ->
+	{Expat, Msg} ->
 	    throw({expat_tree_error, {got_unexpected_msg, Msg}})
     after
 	Timeout ->
@@ -57,5 +57,5 @@ new_test() ->
     ?assertMatch({xml_el, <<>>, <<"a">>, [],
 		  [<<"hello">>,
 		   {xml_el, <<>>, <<"b">>, [], []},
-		   <<"world">>]}, new(100)),
+		   <<"world">>]}, new(P, 100)),
     expat:stop(P).
